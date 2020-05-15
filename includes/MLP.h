@@ -8,6 +8,7 @@
 #include <string>
 #include "layer.h"
 #include "dense.h"
+#include "relu.h"
 #include "vulkan_init.h"
 #include <iostream>
 

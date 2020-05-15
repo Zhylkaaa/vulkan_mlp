@@ -18,13 +18,7 @@ void DenseLayer::backward(VkQueue &queue) {
 }
 
 void DenseLayer::forward(VkQueue &queue) {
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &forwardCommandBuffer;
-    vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-    // TODO: use fence?
-    vkQueueWaitIdle(queue);
+    submitTask(queue, &forwardCommandBuffer);
 }
 
 void DenseLayer::forward_initialize(VkQueue &queue) {
@@ -32,44 +26,22 @@ void DenseLayer::forward_initialize(VkQueue &queue) {
     std::cout<<"dense forward init"<<std::endl;
 
     std::vector<VkBuffer*> buffers{&weight, &bias, &output};
-    allocateAndBindBuffers(*device, *physicalDevice, buffers, deviceMemory, offsets);
+    allocateAndBindBuffers(device, physicalDevice, buffers, deviceMemory, offsets);
 
-    createPipelineLayout(*device, 4, forwardSetLayout, forwardPipelineLayout, sizeof(dims));
-    createComputePipeline(*device, "../shaders/dense.comp.spv", forwardPipelineLayout, forwardPipeline);
+    createPipelineLayout(device, 4, forwardSetLayout, forwardPipelineLayout, sizeof(dims));
+    createComputePipeline(device, "../shaders/dense.comp.spv", forwardPipelineLayout, forwardPipeline);
 
     buffers.insert(buffers.begin(), &input);
 
-    allocateDescriptorSet(*device, buffers, forwardDescriptorPool, forwardSetLayout, forwardDescriptorSet);
-    createCommandPoolAndBuffer(*device, queueFamilyIndex, forwardCommandPool, forwardCommandBuffer);
+    allocateDescriptorSet(device, buffers, forwardDescriptorPool, forwardSetLayout, forwardDescriptorSet);
+    createCommandPoolAndBuffer(device, queueFamilyIndex, forwardCommandPool, forwardCommandBuffer);
 
     recordComputePipeline(forwardCommandBuffer, forwardPipelineLayout, sizeof(dims), reinterpret_cast<void*>(&dim),
             forwardPipeline,forwardDescriptorSet, (dim.batch_size+15)/16, (dim.output_dim+15)/16, 1);
 
-    // initialize parameters
-    /*VkPipeline initPipeline;
-    VkCommandPool initCommandPool;
-    VkCommandBuffer initCommandBuffer;
-
-    createComputePipeline(*device, "../shaders/xavier_init.comp.spv", forwardPipelineLayout, initPipeline);
-    createCommandPoolAndBuffer(*device, queueFamilyIndex, initCommandPool, initCommandBuffer, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT);
-
-    recordComputePipeline(initCommandBuffer, forwardPipelineLayout, sizeof(dims), reinterpret_cast<void*>(&dim),
-                          initPipeline,forwardDescriptorSet, (dim.inp_dim+15)/16, (dim.output_dim+15)/16, 1,
-                          VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &forwardCommandBuffer;
-    vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-    // TODO: use fence?
-    vkQueueWaitIdle(queue);
-
-    vkDestroyCommandPool(*device, initCommandPool, nullptr);
-    vkDestroyPipeline(*device, initPipeline, nullptr);*/
-
+    // TODO: actual xavier initialization
     char* data = nullptr;
-    if(vkMapMemory(*device, deviceMemory, 0, VK_WHOLE_SIZE, 0, reinterpret_cast<void **>(&data)) != VK_SUCCESS){
+    if(vkMapMemory(device, deviceMemory, 0, VK_WHOLE_SIZE, 0, reinterpret_cast<void **>(&data)) != VK_SUCCESS){
         throw std::runtime_error("failed to map device memory");
     }
 
@@ -95,11 +67,11 @@ void DenseLayer::forward_initialize(VkQueue &queue) {
         }
     }
     std::cout<<"end init weight"<<std::endl;
-    vkUnmapMemory(*device, deviceMemory);
+    vkUnmapMemory(device, deviceMemory);
 
 }
 
-DenseLayer::DenseLayer(VkDevice* device, uint32_t queueFamilyIndex, VkPhysicalDevice* physicalDevice,
+DenseLayer::DenseLayer(VkDevice device, uint32_t queueFamilyIndex, VkPhysicalDevice physicalDevice,
         int batch_size, int input_dim, int output_dim, VkBuffer input, float scale, const std::string& initializer) {
     this->scale = scale;
 
@@ -113,7 +85,7 @@ DenseLayer::DenseLayer(VkDevice* device, uint32_t queueFamilyIndex, VkPhysicalDe
     this->queueFamilyIndex = queueFamilyIndex;
     this->physicalDevice = physicalDevice;
 
-    createBuffer(*device, queueFamilyIndex, weight, dim.inp_dim, dim.output_dim);
-    createBuffer(*device, queueFamilyIndex, bias, dim.output_dim, 1);
-    createBuffer(*device, queueFamilyIndex, output, dim.batch_size, dim.output_dim);
+    createBuffer(device, queueFamilyIndex, weight, dim.inp_dim, dim.output_dim);
+    createBuffer(device, queueFamilyIndex, bias, dim.output_dim, 1);
+    createBuffer(device, queueFamilyIndex, output, dim.batch_size, dim.output_dim);
 }

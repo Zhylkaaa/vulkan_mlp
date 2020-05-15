@@ -1,0 +1,23 @@
+#version 450
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(std430, binding=0) buffer inI { float layer_input[]; };
+layout(std430, binding=1) buffer outO { float layer_output[]; };
+
+layout(push_constant) uniform dim {
+    uint batch_size;
+    uint inp_dim;
+};
+
+void main(){
+    uint x = gl_GlobalInvocationID.x;
+    uint y = gl_GlobalInvocationID.y;
+
+    if(x >= batch_size || y >= inp_dim)return;
+
+    uint idx = x*inp_dim + y;
+
+    if(layer_input[idx] > 0.0)layer_output[idx] = layer_input[idx];
+    else layer_output[idx] = 0;
+}

@@ -16,9 +16,9 @@ protected:
     VkBuffer d_input;
     VkBuffer d_output;
 
-    VkDevice* device;
+    VkDevice device;
     uint32_t queueFamilyIndex;
-    VkPhysicalDevice* physicalDevice;
+    VkPhysicalDevice physicalDevice;
 
     VkDeviceMemory deviceMemory;
 

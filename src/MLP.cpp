@@ -35,9 +35,22 @@ void MLP::add(int layer_dim, const std::string &activation, uint32_t input_size,
         input_dim = layers[layers.size()-1]->get_output_dim();
     }
 
-    DenseLayer* d = new DenseLayer(&device, queueFamilyIndex, &physicalDevice, this->batch_size, input_dim, layer_dim, input_buffer);
+    DenseLayer* d = new DenseLayer(device, queueFamilyIndex, physicalDevice, this->batch_size, input_dim, layer_dim, input_buffer);
 
     layers.push_back(d);
+
+    if(activation == "id")return;
+
+    Layer* activation_layer;
+
+    if(activation == "relu"){
+        activation_layer = new ReLULayer(device, queueFamilyIndex, physicalDevice, this->batch_size, layer_dim, d->get_output());
+    } else {
+        std::string error_message = "No matching activation function for " + activation;
+        throw std::invalid_argument(error_message);
+    }
+
+    layers.push_back(activation_layer);
 }
 
 void MLP::forward_initialize(){
@@ -75,6 +88,7 @@ void MLP::forward(const std::vector<std::vector<float> > &batch) {
         layer->forward(queue);
     }
 
+#ifndef NDEBUG
     std::cout<<"output is:"<<std::endl;
 
     int n = layers.size();
@@ -92,6 +106,7 @@ void MLP::forward(const std::vector<std::vector<float> > &batch) {
         std::cout<<std::endl;
     }
     vkUnmapMemory(device, layers[n-1]->get_device_memory());
+#endif
 }
 
 MLP::MLP() {

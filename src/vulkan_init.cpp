@@ -491,3 +491,13 @@ void recordComputePipeline(VkCommandBuffer& commandBuffer, const VkPipelineLayou
         throw std::runtime_error("failed to end command buffer");
     }
 }
+
+void submitTask(VkQueue& queue, VkCommandBuffer* pCommandBuffer){
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = pCommandBuffer;
+    vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+    // TODO: use fence?
+    vkQueueWaitIdle(queue);
+}

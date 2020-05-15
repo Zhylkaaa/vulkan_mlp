@@ -27,7 +27,7 @@ class DenseLayer: public Layer{
     } dim;
 
 public:
-    DenseLayer(VkDevice* device, uint32_t queueFamilyIndex, VkPhysicalDevice* physicalDevice,
+    DenseLayer(VkDevice device, uint32_t queueFamilyIndex, VkPhysicalDevice physicalDevice,
                int batch_size, int input_dim, int output_dim, VkBuffer input, float scale=10, const std::string& initializer="xavier");
 
     void forward_initialize(VkQueue& queue) override;
