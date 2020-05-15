@@ -5,7 +5,7 @@
 int main() {
 
     std::vector<int> layers{5, 5};
-    std::vector<std::string> activations{"relu", "relu"};
+    std::vector<std::string> activations{"relu", "softmax"};
     MLP mlp = MLP(3, 3, layers, activations);
 
     std::vector<std::vector<float>> batch{{1, 2, 3},

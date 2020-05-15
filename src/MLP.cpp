@@ -45,6 +45,8 @@ void MLP::add(int layer_dim, const std::string &activation, uint32_t input_size,
 
     if(activation == "relu"){
         activation_layer = new ReLULayer(device, queueFamilyIndex, physicalDevice, this->batch_size, layer_dim, d->get_output());
+    } else if(activation == "softmax"){
+        activation_layer = new SoftmaxLayer(device, queueFamilyIndex, physicalDevice, this->batch_size, layer_dim, d->get_output());
     } else {
         std::string error_message = "No matching activation function for " + activation;
         throw std::invalid_argument(error_message);
