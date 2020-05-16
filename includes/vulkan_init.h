@@ -35,6 +35,6 @@ void recordComputePipeline(VkCommandBuffer& commandBuffer, const VkPipelineLayou
                            VkDescriptorSet& descriptorSet, uint32_t x_group, uint32_t y_group, uint32_t z_group,
                            VkCommandBufferUsageFlags flags=0);
 
-void submitTask(VkQueue& queue, VkCommandBuffer* pCommandBuffer);
+void submitTask(VkQueue& queue, VkCommandBuffer* pCommandBuffer, bool wait_for_queue=true);
 
 #endif //VULKAN_PERCEPTRON_VULKAN_INIT_H

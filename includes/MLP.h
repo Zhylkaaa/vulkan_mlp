@@ -38,11 +38,12 @@ public:
 
     void forward_initialize();
     void forward(const std::vector<std::vector<float>>& batch);
+    void backward_initialize(VkBuffer& d_out);
     void backward();
 
     VkBuffer& get_output() {return layers[layers.size()-1]->get_output();}
 
-    VkDeviceMemory& get_memory() {return layers[layers.size()-1]->get_device_memory();}
+    VkDeviceMemory& get_output_memory() {return layers[layers.size()-1]->get_forward_device_memory();}
 
     uint64_t get_output_offset(){return offsets[2];}
 };

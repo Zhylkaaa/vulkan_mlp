@@ -1,0 +1,26 @@
+#version 450
+
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding=5) buffer outdb { float d_bias[]; };
+layout(std430, binding=6) buffer readonly indO { float layer_doutput[]; };
+
+
+layout(push_constant) uniform dim {
+    uint batch_size;
+    uint inp_dim;
+    uint out_dim;
+};
+
+void main(){
+    uint x = gl_GlobalInvocationID.x;
+
+    if(x >= out_dim)return;
+
+    float r = 0.0;
+    for(uint i=0;i<batch_size;i++){
+        r += layer_doutput[i*out_dim + x];
+    }
+
+    d_bias[x] = r;
+}

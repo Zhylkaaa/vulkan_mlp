@@ -21,8 +21,9 @@ public:
     void forward(VkQueue& queue) override;
     void backward(VkQueue& queue) override;
     void forward_initialize(VkQueue& queue) override;
+    void backward_initialize(VkBuffer& d_out) override;
 
-    uint64_t get_output_offset() override{return offsets[0];}
+    uint64_t get_output_offset() override{return forward_offsets[0];}
     uint32_t get_output_dim() override{return dim.inp_dim;};
 };
 

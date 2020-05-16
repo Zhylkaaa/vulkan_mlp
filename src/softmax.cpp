@@ -26,7 +26,7 @@ void SoftmaxLayer::forward(VkQueue &queue) {
 
 void SoftmaxLayer::forward_initialize(VkQueue &queue) {
     std::vector<VkBuffer*> buffers{&output};
-    allocateAndBindBuffers(device, physicalDevice, buffers, deviceMemory, offsets);
+    allocateAndBindBuffers(device, physicalDevice, buffers, forwardDeviceMemory, forward_offsets);
 
     createPipelineLayout(device, 2, forwardSetLayout, forwardPipelineLayout, sizeof(dims));
     createComputePipeline(device, "../shaders/softmax.comp.spv", forwardPipelineLayout, forwardPipeline);
@@ -42,5 +42,26 @@ void SoftmaxLayer::forward_initialize(VkQueue &queue) {
 }
 
 void SoftmaxLayer::backward(VkQueue &queue) {
+    submitTask(queue, &backwardCommandBuffer);
+}
 
+void SoftmaxLayer::backward_initialize(VkBuffer &d_out) {
+    d_output = d_out;
+
+    createBuffer(device, queueFamilyIndex, d_input, dim.batch_size, dim.inp_dim);
+
+    std::vector<VkBuffer*> buffers{&d_input};
+    allocateAndBindBuffers(device, physicalDevice, buffers, backwardDeviceMemory, backward_offsets);
+
+    createPipelineLayout(device, 3, backwardSetLayout, backwardPipelineLayout, sizeof(dims));
+    createComputePipeline(device, "../shaders/d_softmax.comp.spv", backwardPipelineLayout, backwardPipeline);
+
+    buffers.insert(buffers.begin(), &output);
+    buffers.push_back(&d_output);
+
+    allocateDescriptorSet(device, buffers, backwardDescriptorPool, backwardSetLayout, backwardDescriptorSet);
+    createCommandPoolAndBuffer(device, queueFamilyIndex, backwardCommandPool, backwardCommandBuffer);
+
+    recordComputePipeline(backwardCommandBuffer, backwardPipelineLayout, sizeof(dims), reinterpret_cast<void*>(&dim),
+                          backwardPipeline,backwardDescriptorSet, (dim.batch_size+15)/16, (dim.inp_dim+15)/16, 1);
 }

@@ -492,12 +492,12 @@ void recordComputePipeline(VkCommandBuffer& commandBuffer, const VkPipelineLayou
     }
 }
 
-void submitTask(VkQueue& queue, VkCommandBuffer* pCommandBuffer){
+void submitTask(VkQueue& queue, VkCommandBuffer* pCommandBuffer, bool wait_for_queue){
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = pCommandBuffer;
     vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
     // TODO: use fence?
-    vkQueueWaitIdle(queue);
+    if(wait_for_queue)vkQueueWaitIdle(queue);
 }

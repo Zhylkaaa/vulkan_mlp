@@ -95,7 +95,7 @@ void MLP::forward(const std::vector<std::vector<float> > &batch) {
 
     int n = layers.size();
     data = nullptr;
-    if(vkMapMemory(device, layers[n-1]->get_device_memory(), 0, VK_WHOLE_SIZE, 0, reinterpret_cast<void **>(&data)) != VK_SUCCESS){
+    if(vkMapMemory(device, layers[n-1]->get_forward_device_memory(), 0, VK_WHOLE_SIZE, 0, reinterpret_cast<void **>(&data)) != VK_SUCCESS){
         throw std::runtime_error("failed to map device memory");
     }
 
@@ -107,12 +107,26 @@ void MLP::forward(const std::vector<std::vector<float> > &batch) {
         }
         std::cout<<std::endl;
     }
-    vkUnmapMemory(device, layers[n-1]->get_device_memory());
+    vkUnmapMemory(device, layers[n-1]->get_forward_device_memory());
 #endif
 }
 
 MLP::MLP() {
     setup_vulkan(instance, debugMessenger, physicalDevice, queueFamilyIndex, device, queue);
+}
+
+void MLP::backward_initialize(VkBuffer& d_out) {
+    layers[layers.size()-1]->backward_initialize(d_out);
+
+    for(int i = layers.size()-2;i>=0;i--){
+        layers[i]->backward_initialize(layers[i+1]->get_d_input());
+    }
+}
+
+void MLP::backward() {
+    for(int i = layers.size()-1;i>=0;i--){
+        layers[i]->backward(queue);
+    }
 }
 
 
