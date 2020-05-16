@@ -53,11 +53,14 @@ public:
 
     VkBuffer& get_output(){return output;}
     VkDeviceMemory& get_forward_device_memory(){return forwardDeviceMemory;}
+    VkDeviceMemory& get_backward_device_memory(){return backwardDeviceMemory;}
     VkBuffer& get_d_input(){return d_input;}
+    uint64_t get_d_input_offset(){return backward_offsets[0];}
 
     virtual uint64_t get_output_offset() = 0;
 
     virtual uint32_t get_output_dim() = 0;
+    virtual uint32_t get_input_dim() = 0;
 
 };
 #endif //VULKAN_PERCEPTRON_LAYER_H

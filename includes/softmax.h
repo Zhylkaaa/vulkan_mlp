@@ -25,6 +25,7 @@ public:
 
     uint64_t get_output_offset() override{return forward_offsets[0];}
     uint32_t get_output_dim() override{return dim.inp_dim;};
+    uint32_t get_input_dim() override {return dim.inp_dim;}
 };
 
 #endif //VULKAN_PERCEPTRON_SOFTMAX_H

@@ -46,6 +46,11 @@ public:
     VkDeviceMemory& get_output_memory() {return layers[layers.size()-1]->get_forward_device_memory();}
 
     uint64_t get_output_offset(){return offsets[2];}
+
+    // TODO: remove on release
+    VkDevice& get_device() {return device;}
+    uint32_t get_queue_index() {return queueFamilyIndex;}
+    VkPhysicalDevice& get_physicalDevice() {return physicalDevice;}
 };
 
 #endif //VULKAN_PERCEPTRON_MLP_H

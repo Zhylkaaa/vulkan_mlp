@@ -126,6 +126,25 @@ void MLP::backward_initialize(VkBuffer& d_out) {
 void MLP::backward() {
     for(int i = layers.size()-1;i>=0;i--){
         layers[i]->backward(queue);
+
+#ifndef NDEBUG
+        std::cout<<"input gradient is:"<<std::endl;
+
+        char* data = nullptr;
+        if(vkMapMemory(device, layers[i]->get_backward_device_memory(), 0, VK_WHOLE_SIZE, 0, reinterpret_cast<void **>(&data)) != VK_SUCCESS){
+            throw std::runtime_error("failed to map device memory");
+        }
+
+        float* d_input = reinterpret_cast<float*>(data + layers[i]->get_d_input_offset());
+
+        for(int i = 0;i<this->batch_size;i++){
+            for(int j = 0;j<layers[i]->get_output_dim();j++){
+                std::cout<<d_input[i*layers[i]->get_input_dim() + j]<<" ";
+            }
+            std::cout<<std::endl;
+        }
+        vkUnmapMemory(device, layers[i]->get_backward_device_memory());
+#endif
     }
 }
 
