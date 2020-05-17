@@ -148,5 +148,16 @@ void MLP::backward() {
     }
 }
 
+std::vector<std::pair<VkBuffer, VkBuffer>> MLP::get_trainable_parameters() {
+    std::vector<std::pair<VkBuffer, VkBuffer>> params;
+
+    for(Layer* layer : layers){
+        std::vector<std::pair<VkBuffer, VkBuffer>> layer_params = layer->get_trainable_parameters();
+        params.insert(params.end(), layer_params.begin(), layer_params.end());
+    }
+
+    return params;
+}
+
 
 

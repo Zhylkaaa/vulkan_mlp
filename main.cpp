@@ -13,12 +13,16 @@ int main() {
                                           {1, 2, 3},
                                           {3, 2, 1}};
 
+    std::vector<std::vector<float>> host_labels{{1, 0, 0, 0, 0},
+                                                {0, 1, 0, 0, 0},
+                                                {0, 0, 1, 0, 0}};
+
     mlp.forward_initialize();
     mlp.forward(batch);
     mlp.forward(batch);
     mlp.forward(batch);
 
-    VkBuffer labels;
+    /*VkBuffer labels;
     VkDeviceMemory deviceMemory;
 
     createBuffer(mlp.get_device(), mlp.get_queue_index(), labels, 3, 5);
@@ -34,11 +38,6 @@ int main() {
 
     float* device_labels = reinterpret_cast<float*>(data + offsets[0]);
 
-
-    std::vector<std::vector<float>> host_labels{{1, 0, 0, 0, 0},
-                                   {0, 1, 0, 0, 0},
-                                   {0, 0, 1, 0, 0}};
-
     for(int i = 0;i<host_labels.size();i++){
         for(int j=0;j<host_labels[0].size();j++){
             device_labels[i*5+j] = host_labels[i][j];
@@ -48,7 +47,7 @@ int main() {
     vkUnmapMemory(mlp.get_device(), deviceMemory);
 
     mlp.backward_initialize(labels);
-    mlp.backward();
+    mlp.backward();*/
 
 
     return 0;

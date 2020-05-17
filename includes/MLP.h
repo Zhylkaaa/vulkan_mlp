@@ -12,8 +12,10 @@
 #include "softmax.h"
 #include "vulkan_init.h"
 #include <iostream>
+#include <trainer.h>
 
 class MLP {
+    friend class Trainer;
     std::vector<Layer*> layers{};
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugMessenger;
@@ -42,15 +44,17 @@ public:
     void backward();
 
     VkBuffer& get_output() {return layers[layers.size()-1]->get_output();}
-
+    uint32_t get_output_dim() {return layers[layers.size()-1]->get_output_dim()}
     VkDeviceMemory& get_output_memory() {return layers[layers.size()-1]->get_forward_device_memory();}
+
+    VkBuffer& get_d_output() {return layers[layers.size()-1]->get_d_output();}
 
     uint64_t get_output_offset(){return offsets[2];}
 
-    // TODO: remove on release
-    VkDevice& get_device() {return device;}
-    uint32_t get_queue_index() {return queueFamilyIndex;}
-    VkPhysicalDevice& get_physicalDevice() {return physicalDevice;}
+    uint32_t get_batch_size(){return batch_size;}
+    uint32_t get_layer_count(){return layers.size();}
+
+    std::vector<std::pair<VkBuffer, VkBuffer>> get_trainable_parameters();
 };
 
 #endif //VULKAN_PERCEPTRON_MLP_H

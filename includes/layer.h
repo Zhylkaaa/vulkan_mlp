@@ -52,6 +52,8 @@ public:
     virtual void forward_initialize(VkQueue& queue) = 0;
 
     VkBuffer& get_output(){return output;}
+    VkBuffer& get_d_output(){return d_output;}
+
     VkDeviceMemory& get_forward_device_memory(){return forwardDeviceMemory;}
     VkDeviceMemory& get_backward_device_memory(){return backwardDeviceMemory;}
     VkBuffer& get_d_input(){return d_input;}
@@ -62,5 +64,6 @@ public:
     virtual uint32_t get_output_dim() = 0;
     virtual uint32_t get_input_dim() = 0;
 
+    virtual std::vector<std::pair<VkBuffer, VkBuffer>> get_trainable_parameters() = 0;
 };
 #endif //VULKAN_PERCEPTRON_LAYER_H
