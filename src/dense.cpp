@@ -5,23 +5,13 @@
 #include <dense.h>
 #include <random>
 
-VkBuffer &DenseLayer::get_weight() {
-    return weight;
-}
-
-VkBuffer &DenseLayer::get_bias() {
-    return bias;
-}
-
 void DenseLayer::forward(VkQueue &queue) {
     submitTask(queue, &forwardCommandBuffer);
 }
 
 void DenseLayer::forward_initialize(VkQueue &queue) {
 
-    std::cout<<"dense forward init"<<std::endl;
-
-    std::vector<VkBuffer*> buffers{&weight, &bias, &output};
+    std::vector<VkBuffer*> buffers{&weight.get_buffer(), &bias.get_buffer(), &output};
     allocateAndBindBuffers(device, physicalDevice, buffers, forwardDeviceMemory, forward_offsets);
 
     createPipelineLayout(device, 4, forwardSetLayout, forwardPipelineLayout, sizeof(dims));
@@ -41,28 +31,22 @@ void DenseLayer::forward_initialize(VkQueue &queue) {
         throw std::runtime_error("failed to map device memory");
     }
 
-    std::cout<<"obtain pointers"<<std::endl;
-
     float* weight = reinterpret_cast<float*>(data + forward_offsets[0]);
     float* bias = reinterpret_cast<float*>(data + forward_offsets[1]);
 
-    std::cout<<"init bias"<<std::endl;
     for(int i = 0;i<dim.output_dim;i++){
         bias[i] = 0;
     }
-    std::cout<<"end init bias"<<std::endl;
 
     std::random_device rd;
     std::mt19937 gen(rd());
     std::normal_distribution<float> dis(0.0, 1.0);
 
-    std::cout<<"init weight"<<std::endl;
     for(int i = 0;i<dim.inp_dim;i++){
         for(int j = 0;j<dim.output_dim;j++){
             weight[i*dim.output_dim + j] = scale * dis(gen);
         }
     }
-    std::cout<<"end init weight"<<std::endl;
     vkUnmapMemory(device, forwardDeviceMemory);
 
 }
@@ -81,8 +65,14 @@ DenseLayer::DenseLayer(VkDevice device, uint32_t queueFamilyIndex, VkPhysicalDev
     this->queueFamilyIndex = queueFamilyIndex;
     this->physicalDevice = physicalDevice;
 
-    createBuffer(device, queueFamilyIndex, weight, dim.inp_dim, dim.output_dim);
-    createBuffer(device, queueFamilyIndex, bias, dim.output_dim, 1);
+    createBuffer(device, queueFamilyIndex, weight.get_buffer(), dim.inp_dim, dim.output_dim);
+    weight.set_height(dim.inp_dim);
+    weight.set_width(dim.output_dim);
+
+    createBuffer(device, queueFamilyIndex, bias.get_buffer(), dim.output_dim, 1);
+    bias.set_height(dim.output_dim);
+    bias.set_width(1);
+
     createBuffer(device, queueFamilyIndex, output, dim.batch_size, dim.output_dim);
 }
 
@@ -96,10 +86,15 @@ void DenseLayer::backward_initialize(VkBuffer &d_out) {
     d_output = d_out;
 
     createBuffer(device, queueFamilyIndex, d_input, dim.batch_size, dim.inp_dim);
-    createBuffer(device, queueFamilyIndex, d_weight, dim.inp_dim, dim.output_dim);
-    createBuffer(device, queueFamilyIndex, d_bias, dim.output_dim, 1);
+    createBuffer(device, queueFamilyIndex, d_weight.get_buffer(), dim.inp_dim, dim.output_dim);
+    d_weight.set_height(dim.inp_dim);
+    d_weight.set_width(dim.output_dim);
 
-    std::vector<VkBuffer*> buffers{&d_input, &d_weight, &d_bias};
+    createBuffer(device, queueFamilyIndex, d_bias.get_buffer(), dim.output_dim, 1);
+    d_bias.set_height(dim.output_dim);
+    d_bias.set_width(1);
+
+    std::vector<VkBuffer*> buffers{&d_input, &d_weight.get_buffer(), &d_bias.get_buffer()};
 
     allocateAndBindBuffers(device, physicalDevice, buffers, backwardDeviceMemory, backward_offsets);
 
@@ -108,10 +103,9 @@ void DenseLayer::backward_initialize(VkBuffer &d_out) {
     createComputePipeline(device, "../shaders/d_dense_w.comp.spv", backwardPipelineLayout, backwardWeightPipeline);
     createComputePipeline(device, "../shaders/d_dense_b.comp.spv", backwardPipelineLayout, backwardBiasPipeline);
 
-
+    buffers.insert(buffers.begin(), &bias.get_buffer());
+    buffers.insert(buffers.begin(), &weight.get_buffer());
     buffers.insert(buffers.begin(), &input);
-    buffers.insert(buffers.begin(), &weight);
-    buffers.insert(buffers.begin(), &bias);
     buffers.push_back(&d_output);
 
     allocateDescriptorSet(device, buffers, backwardDescriptorPool, backwardSetLayout, backwardDescriptorSet);
@@ -127,4 +121,55 @@ void DenseLayer::backward_initialize(VkBuffer &d_out) {
 
     recordComputePipeline(backwardBiasCommandBuffer, backwardPipelineLayout, sizeof(dims), reinterpret_cast<void*>(&dim),
                           backwardBiasPipeline,backwardDescriptorSet, (dim.output_dim+31)/32, 1, 1);
+    backward_initialized = true;
+}
+
+std::vector<std::pair<Tensor, Tensor>> DenseLayer::get_trainable_parameters() {
+    std::vector<std::pair<Tensor, Tensor>> params{
+            {weight, d_weight},
+            {bias, d_bias}
+    };
+    return params;
+}
+
+Tensor &DenseLayer::get_bias() {
+    return bias;
+}
+
+Tensor &DenseLayer::get_weight() {
+    return weight;
+}
+
+DenseLayer::~DenseLayer() {
+    vkDestroyCommandPool(device, forwardCommandPool, nullptr);
+
+    vkFreeMemory(device, forwardDeviceMemory, nullptr);
+
+    vkDestroyBuffer(device, output, nullptr);
+    vkDestroyBuffer(device, weight.get_buffer(), nullptr);
+    vkDestroyBuffer(device, bias.get_buffer(), nullptr);
+
+    vkDestroyDescriptorPool(device, forwardDescriptorPool, nullptr);
+
+    vkDestroyPipeline(device, forwardPipeline, nullptr);
+
+    vkDestroyPipelineLayout(device, forwardPipelineLayout, nullptr);
+
+    vkDestroyDescriptorSetLayout(device, forwardSetLayout, nullptr);
+
+    if(backward_initialized) {
+        vkDestroyCommandPool(device, backwardCommandPool, nullptr);
+        vkDestroyCommandPool(device, backwardBiasCommandPool, nullptr);
+        vkDestroyCommandPool(device, backwardWeightCommandPool, nullptr);
+        vkFreeMemory(device, backwardDeviceMemory, nullptr);
+        vkDestroyBuffer(device, d_input, nullptr);
+        vkDestroyBuffer(device, d_weight.get_buffer(), nullptr);
+        vkDestroyBuffer(device, d_bias.get_buffer(), nullptr);
+        vkDestroyDescriptorPool(device, backwardDescriptorPool, nullptr);
+        vkDestroyPipeline(device, backwardPipeline, nullptr);
+        vkDestroyPipeline(device, backwardWeightPipeline, nullptr);
+        vkDestroyPipeline(device, backwardBiasPipeline, nullptr);
+        vkDestroyPipelineLayout(device, backwardPipelineLayout, nullptr);
+        vkDestroyDescriptorSetLayout(device, backwardSetLayout, nullptr);
+    }
 }

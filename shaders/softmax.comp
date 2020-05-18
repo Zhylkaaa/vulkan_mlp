@@ -12,7 +12,6 @@ layout(push_constant) uniform dim {
 
 void main(){
     uint x = gl_GlobalInvocationID.x;
-    uint y = gl_GlobalInvocationID.y;
 
     if(x >= batch_size)return;
 

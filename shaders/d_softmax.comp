@@ -20,5 +20,5 @@ void main(){
 
     uint idx = x*inp_dim + y;
 
-    layer_dinput[idx] = layer_output[idx] - layer_doutput[idx];
+    layer_dinput[idx] = (layer_output[idx] - layer_doutput[idx]) / batch_size;
 }

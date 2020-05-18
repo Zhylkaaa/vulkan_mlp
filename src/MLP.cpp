@@ -60,7 +60,6 @@ void MLP::forward_initialize(){
     allocateAndBindBuffers(device, physicalDevice, buffers, deviceMemory, offsets);
 
     for(Layer* layer : layers){
-        std::cout<<"forward_initialize:"<<std::endl;
         layer->forward_initialize(queue);
     }
 }
@@ -70,7 +69,6 @@ void MLP::forward(const std::vector<std::vector<float> > &batch) {
     if(vkMapMemory(device, deviceMemory, 0, VK_WHOLE_SIZE, 0, reinterpret_cast<void**>(&data)) != VK_SUCCESS){
         throw std::runtime_error("failed to map device memory");
     }
-    std::cout<<"batch_init:"<<std::endl;
     float* batch_data = reinterpret_cast<float*>(data + offsets[0]);
 
     if(batch.size() != this->batch_size || batch[0].size() != this->input_size){
@@ -86,7 +84,6 @@ void MLP::forward(const std::vector<std::vector<float> > &batch) {
     vkUnmapMemory(device, deviceMemory);
 
     for(Layer* layer : layers){
-        std::cout<<"forward:"<<std::endl;
         layer->forward(queue);
     }
 
@@ -116,7 +113,7 @@ MLP::MLP() {
 }
 
 void MLP::backward_initialize(VkBuffer& d_out) {
-    layers[layers.size()-1]->backward_initialize(d_out);
+    layers.back()->backward_initialize(d_out);
 
     for(int i = layers.size()-2;i>=0;i--){
         layers[i]->backward_initialize(layers[i+1]->get_d_input());
@@ -126,37 +123,35 @@ void MLP::backward_initialize(VkBuffer& d_out) {
 void MLP::backward() {
     for(int i = layers.size()-1;i>=0;i--){
         layers[i]->backward(queue);
-
-#ifndef NDEBUG
-        std::cout<<"input gradient is:"<<std::endl;
-
-        char* data = nullptr;
-        if(vkMapMemory(device, layers[i]->get_backward_device_memory(), 0, VK_WHOLE_SIZE, 0, reinterpret_cast<void **>(&data)) != VK_SUCCESS){
-            throw std::runtime_error("failed to map device memory");
-        }
-
-        float* d_input = reinterpret_cast<float*>(data + layers[i]->get_d_input_offset());
-
-        for(int i = 0;i<this->batch_size;i++){
-            for(int j = 0;j<layers[i]->get_output_dim();j++){
-                std::cout<<d_input[i*layers[i]->get_input_dim() + j]<<" ";
-            }
-            std::cout<<std::endl;
-        }
-        vkUnmapMemory(device, layers[i]->get_backward_device_memory());
-#endif
     }
 }
 
-std::vector<std::pair<VkBuffer, VkBuffer>> MLP::get_trainable_parameters() {
-    std::vector<std::pair<VkBuffer, VkBuffer>> params;
+std::vector<std::pair<Tensor, Tensor>> MLP::get_trainable_parameters() {
+    std::vector<std::pair<Tensor, Tensor>> params;
 
     for(Layer* layer : layers){
-        std::vector<std::pair<VkBuffer, VkBuffer>> layer_params = layer->get_trainable_parameters();
+        std::vector<std::pair<Tensor, Tensor>> layer_params = layer->get_trainable_parameters();
         params.insert(params.end(), layer_params.begin(), layer_params.end());
     }
 
     return params;
+}
+
+MLP::~MLP() {
+
+    for(Layer* layer : layers){
+        delete layer;
+    }
+
+    vkFreeMemory(device, deviceMemory, nullptr);
+
+    vkDestroyBuffer(device, input, nullptr);
+
+    vkDestroyDevice(device, nullptr);
+
+    DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+
+    vkDestroyInstance(instance, nullptr);
 }
 
 

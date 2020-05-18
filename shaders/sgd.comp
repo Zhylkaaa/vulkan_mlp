@@ -1,0 +1,26 @@
+#version 450
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(std430, binding=0) buffer inW { float layer_W[]; };
+layout(std430, binding=1) buffer indW { float layer_dW[]; };
+
+layout(push_constant) uniform params {
+    float lr;
+    uint height;
+    uint width;
+};
+
+void main(){
+    uint x = gl_GlobalInvocationID.x;
+    uint y = gl_GlobalInvocationID.y;
+
+    if(width == 1){
+        uint idx = x + y;
+        if(idx >= height)return;
+        layer_W[idx] -= lr*layer_dW[idx];
+    } else {
+        if(x >= height || y >= width)return;
+        layer_W[x*width + y] -= lr*layer_dW[x*width + y];
+    }
+}

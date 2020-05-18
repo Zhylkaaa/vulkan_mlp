@@ -128,6 +128,8 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMes
 }
 
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
+    if(!enableValidationLayers)return;
+
     auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func != nullptr) {
         func(instance, debugMessenger, pAllocator);
@@ -447,6 +449,71 @@ void allocateDescriptorSet(const VkDevice& device, std::vector<VkBuffer*>& buffe
     vkUpdateDescriptorSets(device, descriptorSetWrites.size(), descriptorSetWrites.data(), 0, nullptr);
 }
 
+void allocateDescriptorSet(const VkDevice& device, std::vector<std::vector<VkBuffer*>>& buffers,
+                           VkDescriptorPool& descriptorPool, const std::vector<VkDescriptorSetLayout> &setLayout, std::vector<VkDescriptorSet>& descriptorSet){
+    VkDescriptorPoolCreateInfo descriptorPoolCreateInfo{};
+    descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptorPoolCreateInfo.maxSets = static_cast<uint32_t>(buffers.size());
+
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    uint32_t count = 0;
+
+    for(const std::vector<VkBuffer*>& buffer : buffers){
+        count += buffer.size();
+    }
+
+    poolSize.descriptorCount = count;
+
+    descriptorPoolCreateInfo.poolSizeCount = 1;
+    descriptorPoolCreateInfo.pPoolSizes = &poolSize;
+
+    if(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool) != VK_SUCCESS){
+        throw std::runtime_error("failed to create descriptor pool");
+    }
+
+    VkDescriptorSetAllocateInfo descriptorSetAllocateInfo{};
+    descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    descriptorSetAllocateInfo.descriptorPool = descriptorPool;
+    descriptorSetAllocateInfo.descriptorSetCount = static_cast<uint32_t>(setLayout.size());
+    descriptorSetAllocateInfo.pSetLayouts = setLayout.data();
+
+    if(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, descriptorSet.data()) != VK_SUCCESS){
+        throw std::runtime_error("failed to allocate descriptor sets");
+    }
+
+    uint32_t j=0;
+    for(const std::vector<VkBuffer*>& buffer : buffers){
+
+        std::vector<VkWriteDescriptorSet> descriptorSetWrites(buffer.size());
+        std::vector<VkDescriptorBufferInfo> bufferInfos(buffer.size());
+
+        uint32_t i = 0;
+        for(VkBuffer* buff : buffer){
+            VkWriteDescriptorSet writeDescriptorSet{};
+            writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            writeDescriptorSet.dstSet = descriptorSet[j];
+            writeDescriptorSet.dstBinding = i;
+            writeDescriptorSet.dstArrayElement = 0;
+            writeDescriptorSet.descriptorCount = 1;
+            writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+            VkDescriptorBufferInfo buffInfo{};
+            buffInfo.buffer = *buff;
+            buffInfo.offset = 0;
+            buffInfo.range = VK_WHOLE_SIZE;
+            bufferInfos[i] = buffInfo;
+
+            writeDescriptorSet.pBufferInfo = &bufferInfos[i];
+            descriptorSetWrites[i] = writeDescriptorSet;
+            i++;
+        }
+
+        vkUpdateDescriptorSets(device, descriptorSetWrites.size(), descriptorSetWrites.data(), 0, nullptr);
+        j++;
+    }
+}
+
 void createCommandPoolAndBuffer(const VkDevice& device, uint32_t queueFamilyIndex,
         VkCommandPool& commandPool, VkCommandBuffer& commandBuffer, VkCommandPoolCreateFlags flags){
     VkCommandPoolCreateInfo commandPoolCreateInfo{};
@@ -466,6 +533,29 @@ void createCommandPoolAndBuffer(const VkDevice& device, uint32_t queueFamilyInde
     commandBufferAllocateInfo.commandBufferCount = 1;
 
     if(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer) != VK_SUCCESS){
+        throw std::runtime_error("failed to allocate command buffer");
+    }
+}
+
+void createCommandPoolAndBuffer(const VkDevice& device, uint32_t queueFamilyIndex,
+                                VkCommandPool& commandPool, std::vector<VkCommandBuffer>& commandBuffer, VkCommandPoolCreateFlags flags){
+    VkCommandPoolCreateInfo commandPoolCreateInfo{};
+    commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    commandPoolCreateInfo.flags = flags;
+    commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
+
+    if(vkCreateCommandPool(device, &commandPoolCreateInfo, nullptr, &commandPool) != VK_SUCCESS){
+        throw std::runtime_error("failed to create command pool");
+    }
+
+    VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
+    commandBufferAllocateInfo.sType =
+            VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    commandBufferAllocateInfo.commandPool = commandPool;
+    commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    commandBufferAllocateInfo.commandBufferCount = static_cast<uint32_t>(commandBuffer.size());
+
+    if(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, commandBuffer.data()) != VK_SUCCESS){
         throw std::runtime_error("failed to allocate command buffer");
     }
 }

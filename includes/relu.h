@@ -27,5 +27,9 @@ public:
     uint64_t get_output_offset() override{return forward_offsets[0];}
     uint32_t get_output_dim() override{return dim.inp_dim;};
     uint32_t get_input_dim() override {return dim.inp_dim;}
+
+    std::vector<std::pair<Tensor, Tensor>> get_trainable_parameters() override;
+
+    ~ReLULayer();
 };
 #endif //VULKAN_PERCEPTRON_RELU_H

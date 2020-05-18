@@ -7,24 +7,34 @@
 
 #include <optimizer.h>
 #include <vulkan_init.h>
+#include <iostream>
 
 class SGD: public Optimizer {
-    VkDeviceMemory forwardDeviceMemory;
 
-    VkPipeline forwardPipeline;
-    VkPipelineLayout forwardPipelineLayout;
-    VkDescriptorSetLayout forwardSetLayout;
+    struct push_constant {
+        float lr;
+        uint32_t height;
+        uint32_t width;
+    };
 
-    VkDescriptorPool forwardDescriptorPool;
-    VkDescriptorSet forwardDescriptorSet;
+    std::vector<push_constant> pushConstant;
+    std::vector<VkPipeline> optimizePipeline;
+    std::vector<VkPipelineLayout> optimizePipelineLayout;
+    std::vector<VkDescriptorSetLayout> optimizeSetLayout;
 
-    VkCommandPool forwardCommandPool;
-    VkCommandBuffer forwardCommandBuffer;
+    VkDescriptorPool optimizeDescriptorPool;
+    std::vector<VkDescriptorSet> optimizeDescriptorSet;
 
+    VkCommandPool optimizeCommandPool;
+    std::vector<VkCommandBuffer> optimizeCommandBuffer;
+
+    VkDevice device;
 public:
     SGD(const std::unordered_map<std::string, float>& optimizer_params);
 
-    void init(const std::vector<std::pair<VkBuffer, VkBuffer>>& trainable_parameters) override;
-    void optimize() override;
+    void init(const VkDevice& device, uint32_t queueFamilyIndex, std::vector<std::pair<Tensor, Tensor>> trainable_parameters) override;
+    void optimize(VkQueue& queue) override;
+
+    ~SGD();
 };
 #endif //VULKAN_PERCEPTRON_SGD_H

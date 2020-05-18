@@ -21,7 +21,6 @@ struct example {
 class ClassificationTrainer: public Trainer {
     VkBuffer labels;
     std::vector<example> dataset;
-    Optimizer* parameters_optimizer;
 
     struct dims {
         uint32_t batch_size;
@@ -29,12 +28,14 @@ class ClassificationTrainer: public Trainer {
     } dim;
 public:
 
-    ClassificationTrainer(MLP mlp, std::vector<example> &dataset, const std::unordered_map<std::string, float>& optimizer_params,
+    ClassificationTrainer(MLP* mlp, std::vector<example> &dataset, const std::unordered_map<std::string, float>& optimizer_params,
                           const std::string& optimizer="sgd");
 
     void train(uint32_t num_iterations, uint32_t print_every=0) override;
 
     float compute_loss(const std::vector<std::vector<float>>& labels) override;
+
+    ~ClassificationTrainer();
 };
 
 #endif //VULKAN_PERCEPTRON_CLASSIFICATION_TRAINER_H

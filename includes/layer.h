@@ -7,6 +7,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <tensor.h>
 
 class Layer {
 protected:
@@ -45,6 +46,8 @@ protected:
     VkCommandPool backwardCommandPool;
     VkCommandBuffer backwardCommandBuffer;
 
+    bool backward_initialized = false;
+
 public:
     virtual void forward(VkQueue& queue) = 0;
     virtual void backward(VkQueue& queue) = 0;
@@ -64,6 +67,8 @@ public:
     virtual uint32_t get_output_dim() = 0;
     virtual uint32_t get_input_dim() = 0;
 
-    virtual std::vector<std::pair<VkBuffer, VkBuffer>> get_trainable_parameters() = 0;
+    virtual std::vector<std::pair<Tensor, Tensor>> get_trainable_parameters() = 0;
+
+    virtual ~Layer() = default;
 };
 #endif //VULKAN_PERCEPTRON_LAYER_H

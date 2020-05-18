@@ -60,4 +60,35 @@ void ReLULayer::backward_initialize(VkBuffer &d_out) {
 
     recordComputePipeline(backwardCommandBuffer, backwardPipelineLayout, sizeof(dims), reinterpret_cast<void*>(&dim),
                           backwardPipeline,backwardDescriptorSet, (dim.batch_size+15)/16, (dim.inp_dim+15)/16, 1);
+    backward_initialized = true;
+}
+
+std::vector<std::pair<Tensor, Tensor>> ReLULayer::get_trainable_parameters() {
+    return std::vector<std::pair<Tensor, Tensor>>();
+}
+
+ReLULayer::~ReLULayer() {
+    vkDestroyCommandPool(device, forwardCommandPool, nullptr);
+
+    vkFreeMemory(device, forwardDeviceMemory, nullptr);
+
+    vkDestroyBuffer(device, output, nullptr);
+
+    vkDestroyDescriptorPool(device, forwardDescriptorPool, nullptr);
+
+    vkDestroyPipeline(device, forwardPipeline, nullptr);
+
+    vkDestroyPipelineLayout(device, forwardPipelineLayout, nullptr);
+
+    vkDestroyDescriptorSetLayout(device, forwardSetLayout, nullptr);
+
+    if(backward_initialized){
+        vkDestroyCommandPool(device, backwardCommandPool, nullptr);
+        vkFreeMemory(device, backwardDeviceMemory, nullptr);
+        vkDestroyBuffer(device, d_input, nullptr);
+        vkDestroyDescriptorPool(device, backwardDescriptorPool, nullptr);
+        vkDestroyPipeline(device, backwardPipeline, nullptr);
+        vkDestroyPipelineLayout(device, backwardPipelineLayout, nullptr);
+        vkDestroyDescriptorSetLayout(device, backwardSetLayout, nullptr);
+    }
 }

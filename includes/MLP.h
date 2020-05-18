@@ -10,9 +10,8 @@
 #include "dense.h"
 #include "relu.h"
 #include "softmax.h"
-#include "vulkan_init.h"
+#include <vulkan_init.h>
 #include <iostream>
-#include <trainer.h>
 
 class MLP {
     friend class Trainer;
@@ -44,17 +43,25 @@ public:
     void backward();
 
     VkBuffer& get_output() {return layers[layers.size()-1]->get_output();}
-    uint32_t get_output_dim() {return layers[layers.size()-1]->get_output_dim()}
+    uint32_t get_output_dim() {return layers[layers.size()-1]->get_output_dim();}
+
     VkDeviceMemory& get_output_memory() {return layers[layers.size()-1]->get_forward_device_memory();}
 
     VkBuffer& get_d_output() {return layers[layers.size()-1]->get_d_output();}
 
-    uint64_t get_output_offset(){return offsets[2];}
+    uint64_t get_output_offset(){return layers[layers.size()-1]->get_output_offset();}
 
     uint32_t get_batch_size(){return batch_size;}
     uint32_t get_layer_count(){return layers.size();}
 
-    std::vector<std::pair<VkBuffer, VkBuffer>> get_trainable_parameters();
+    std::vector<std::pair<Tensor, Tensor>> get_trainable_parameters();
+
+    ~MLP();
+
+    // DEBUG
+    VkDevice &get_device() {return device;}
+    VkPhysicalDevice& get_physicalDevice() {return physicalDevice;}
+    uint32_t get_queue_index() {return queueFamilyIndex;}
 };
 
 #endif //VULKAN_PERCEPTRON_MLP_H

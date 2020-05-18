@@ -8,6 +8,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <string>
+#include <unordered_set>
 
 void setup_vulkan(VkInstance& instance, VkDebugUtilsMessengerEXT& debugMessenger, VkPhysicalDevice& physicalDevice,
                   uint32_t& queueFamilyIndex, VkDevice& device, VkQueue& queue);
@@ -27,8 +28,14 @@ void createComputePipeline(const VkDevice& device, const std::string& shaderName
 void allocateDescriptorSet(const VkDevice& device, std::vector<VkBuffer*>& buffers,
                            VkDescriptorPool& descriptorPool, const VkDescriptorSetLayout &setLayout, VkDescriptorSet& descriptorSet);
 
+void allocateDescriptorSet(const VkDevice& device, std::vector<std::vector<VkBuffer*>>& buffers,
+                           VkDescriptorPool& descriptorPool, const std::vector<VkDescriptorSetLayout> &setLayout, std::vector<VkDescriptorSet>& descriptorSet);
+
 void createCommandPoolAndBuffer(const VkDevice& device, uint32_t queueFamilyIndex,
                                 VkCommandPool& commandPool, VkCommandBuffer& commandBuffer, VkCommandPoolCreateFlags flags=0);
+
+void createCommandPoolAndBuffer(const VkDevice& device, uint32_t queueFamilyIndex,
+                                VkCommandPool& commandPool, std::vector<VkCommandBuffer>& commandBuffer, VkCommandPoolCreateFlags flags=0);
 
 void recordComputePipeline(VkCommandBuffer& commandBuffer, const VkPipelineLayout& pipelineLayout,
                            uint32_t push_constant_size, void* push_constant_vals, const VkPipeline& pipeline,
@@ -36,5 +43,7 @@ void recordComputePipeline(VkCommandBuffer& commandBuffer, const VkPipelineLayou
                            VkCommandBufferUsageFlags flags=0);
 
 void submitTask(VkQueue& queue, VkCommandBuffer* pCommandBuffer, bool wait_for_queue=true);
+
+void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 
 #endif //VULKAN_PERCEPTRON_VULKAN_INIT_H
