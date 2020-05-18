@@ -56,10 +56,10 @@ void SGD::init(const VkDevice& device, uint32_t queueFamilyIndex, std::vector<st
 
 void SGD::optimize(VkQueue& queue) {
     for(VkCommandBuffer &commandBuffer : optimizeCommandBuffer){
-        submitTask(queue, &commandBuffer);
+        submitTask(queue, &commandBuffer, false);
     }
 
-    //vkQueueWaitIdle(queue);
+    vkQueueWaitIdle(queue);
 }
 
 SGD::~SGD() {
