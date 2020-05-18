@@ -43,8 +43,11 @@ void SGD::init(const VkDevice& device, uint32_t queueFamilyIndex, std::vector<st
         }
 
         pushConstant[i].lr = optimizer_params["learning_rate"];
+        pushConstant[i].dim = trainable_parameters[i].first.get_dims();
+        /*
         pushConstant[i].height = trainable_parameters[i].first.get_dims().height;
         pushConstant[i].width = trainable_parameters[i].first.get_dims().width;
+         */
 
         recordComputePipeline(optimizeCommandBuffer[i], optimizePipelineLayout[i], sizeof(push_constant),
                 reinterpret_cast<void*>(&pushConstant[i]), optimizePipeline[i],

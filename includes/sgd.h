@@ -13,8 +13,7 @@ class SGD: public Optimizer {
 
     struct push_constant {
         float lr;
-        uint32_t height;
-        uint32_t width;
+        Tensor::dims dim;
     };
 
     std::vector<push_constant> pushConstant;
