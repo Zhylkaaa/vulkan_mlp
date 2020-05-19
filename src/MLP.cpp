@@ -86,26 +86,6 @@ void MLP::forward(const std::vector<std::vector<float> > &batch) {
     for(Layer* layer : layers){
         layer->forward(queue);
     }
-
-#ifndef NDEBUG
-    std::cout<<"output is:"<<std::endl;
-
-    int n = layers.size();
-    data = nullptr;
-    if(vkMapMemory(device, layers[n-1]->get_forward_device_memory(), 0, VK_WHOLE_SIZE, 0, reinterpret_cast<void **>(&data)) != VK_SUCCESS){
-        throw std::runtime_error("failed to map device memory");
-    }
-
-    float* output = reinterpret_cast<float*>(data + layers[n-1]->get_output_offset());
-
-    for(int i = 0;i<this->batch_size;i++){
-        for(int j = 0;j<layers[n-1]->get_output_dim();j++){
-            std::cout<<output[i*layers[n-1]->get_output_dim() + j]<<" ";
-        }
-        std::cout<<std::endl;
-    }
-    vkUnmapMemory(device, layers[n-1]->get_forward_device_memory());
-#endif
 }
 
 MLP::MLP() {
@@ -152,6 +132,118 @@ MLP::~MLP() {
     DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
 
     vkDestroyInstance(instance, nullptr);
+}
+
+void MLP::eval_batch(std::vector<std::vector<float>>& batch, VkCommandBuffer& evalCommandBuffer,
+        VkDeviceMemory evalDeviceMemory, std::vector<uint64_t>& eval_offsets, uint32_t& correct_predictions,
+        std::vector<std::vector<float>>& true_labels){
+
+    forward(batch);
+    submitTask(queue, &evalCommandBuffer);
+
+    char *data = nullptr;
+    if(vkMapMemory(device, evalDeviceMemory, 0, VK_WHOLE_SIZE, 0, reinterpret_cast<void**>(&data)) != VK_SUCCESS){
+        throw std::runtime_error("failed to map device memory");
+    }
+
+    uint32_t* p_labels = reinterpret_cast<uint32_t*>(data + eval_offsets[0]);
+
+    for(uint32_t k = 0;k<batch_size;k++){
+        if(true_labels[k][p_labels[k]] == 1)correct_predictions++;
+    }
+
+    vkUnmapMemory(device, evalDeviceMemory);
+}
+
+float MLP::evaluate(std::vector<std::vector<float>> &X, std::vector<std::vector<float>> &y) {
+    if(X.size() != y.size() || X.empty()){
+        throw std::invalid_argument("X and y should have same size > 0");
+    }
+
+    if(y[0].size() != get_output_dim()){
+        throw std::invalid_argument("model's output size doesn't much label's");
+    }
+
+    uint32_t iters = X.size() / batch_size;
+
+    uint32_t ex = 0;
+
+    VkBuffer predicted_labels;
+    createBuffer(device, queueFamilyIndex, predicted_labels, batch_size, 1, sizeof(uint32_t));
+
+    std::vector<VkBuffer*> buffers{&predicted_labels};
+
+    VkDeviceMemory evalDeviceMemory;
+    std::vector<uint64_t> eval_offsets;
+    VkDescriptorSetLayout evalSetLayout;
+    VkPipelineLayout evalPipelineLayout;
+    VkPipeline evalPipeline;
+    VkDescriptorPool evalDescriptorPool;
+    VkDescriptorSet evalDescriptorSet;
+    VkCommandPool evalCommandPool;
+    VkCommandBuffer evalCommandBuffer;
+
+    struct push_const {
+        uint32_t batch_size;
+        uint32_t inp_dim;
+    } dim{};
+
+    dim.batch_size = batch_size;
+    dim.inp_dim = get_output_dim();
+
+    allocateAndBindBuffers(device, physicalDevice, buffers, evalDeviceMemory, eval_offsets);
+
+    createPipelineLayout(device, 2, evalSetLayout, evalPipelineLayout, sizeof(push_const));
+    createComputePipeline(device, "../shaders/argmax.comp.spv", evalPipelineLayout, evalPipeline);
+
+    buffers.insert(buffers.begin(), &get_output());
+
+    allocateDescriptorSet(device, buffers, evalDescriptorPool, evalSetLayout, evalDescriptorSet);
+    createCommandPoolAndBuffer(device, queueFamilyIndex, evalCommandPool, evalCommandBuffer);
+
+    recordComputePipeline(evalCommandBuffer, evalPipelineLayout, sizeof(push_const), reinterpret_cast<void*>(&dim),
+                          evalPipeline, evalDescriptorSet, (dim.batch_size+31)/32, 1, 1);
+
+    uint32_t correct_predictions = 0;
+
+    std::vector<std::vector<float>> batch(batch_size);
+    std::vector<std::vector<float>> true_labels(batch_size);
+
+    for(uint32_t i = 0;i<iters;i++){
+        for(uint32_t j=0;j<batch_size;j++){
+            batch[j] = X[ex];
+            true_labels[j] = y[ex];
+            ex++;
+        }
+
+        eval_batch(batch, evalCommandBuffer, evalDeviceMemory, eval_offsets, correct_predictions, true_labels);
+    }
+
+    if(ex != X.size()){
+        uint32_t j;
+        for(j=0;j<batch_size && ex != X.size();j++){
+            batch[j] = X[ex];
+            true_labels[j] = y[ex];
+            ex++;
+        }
+
+        for(;j<batch_size;j++){
+            batch[j] = std::vector<float>(input_size, 0);
+            true_labels[j] = std::vector<float>(get_output_dim(), 0);
+        }
+
+        eval_batch(batch, evalCommandBuffer, evalDeviceMemory, eval_offsets, correct_predictions, true_labels);
+    }
+
+    vkDestroyCommandPool(device, evalCommandPool, nullptr);
+    vkFreeMemory(device, evalDeviceMemory, nullptr);
+    vkDestroyBuffer(device, predicted_labels, nullptr);
+    vkDestroyDescriptorPool(device, evalDescriptorPool, nullptr);
+    vkDestroyPipeline(device, evalPipeline, nullptr);
+    vkDestroyPipelineLayout(device, evalPipelineLayout, nullptr);
+    vkDestroyDescriptorSetLayout(device, evalSetLayout, nullptr);
+
+    return static_cast<float>(correct_predictions) / X.size();
 }
 
 

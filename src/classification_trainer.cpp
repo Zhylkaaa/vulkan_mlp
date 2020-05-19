@@ -32,22 +32,26 @@ ClassificationTrainer::ClassificationTrainer(MLP* mlp,
     }
 }
 
-void inline create_batch(std::vector<example>& batch, std::mt19937& gen, std::uniform_int_distribution<int>& distribution,
+void inline create_batch(std::vector<example>& batch, uint32_t& iterator,
         std::vector<example>& dataset, uint32_t batch_size){
-    for(uint32_t i=0;i<batch_size; i++){
-        batch[i] = dataset[distribution(gen)];
+    for(uint32_t k = 0;k<batch_size;k++){
+        batch[k] = dataset[iterator++];
+        iterator %= dataset.size();
     }
 }
 
 void ClassificationTrainer::train(uint32_t num_iterations, uint32_t print_every) {
+    std::vector<float> tmp_loss_history;
+    train(num_iterations, tmp_loss_history, print_every);
+}
+
+void ClassificationTrainer::train(uint32_t num_iterations, std::vector<float> &loss_history, uint32_t print_every) {
     std::vector<example> batch(mlp->get_batch_size());
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> distribution(0,dataset.size()-1);
+    uint32_t iterator = 0;
 
     for(int i=0;i<num_iterations;i++){
-        create_batch(batch, gen, distribution, dataset, mlp->get_batch_size());
+        create_batch(batch, iterator, dataset, mlp->get_batch_size());
 
         std::vector<std::vector<float>> x_batch(mlp->get_batch_size(), std::vector<float>(dataset[0].x.size()));
         std::vector<std::vector<float>> y_batch(mlp->get_batch_size(), std::vector<float>(dataset[0].y.size()));
@@ -81,7 +85,9 @@ void ClassificationTrainer::train(uint32_t num_iterations, uint32_t print_every)
         parameters_optimizer->optimize(get_queue());
 
         if((print_every != 0 && i % print_every == 0) || i == num_iterations-1){
-            std::cout<<"step: "<<i<<" loss: "<<compute_loss(y_batch)<<std::endl;
+            float l = compute_loss(y_batch);
+            std::cout<<"step: "<<i<<" loss: "<<l<<std::endl;
+            loss_history.push_back(l);
         }
     }
 }

@@ -3,72 +3,67 @@
 #include <string>
 #include <vulkan_init.h>
 #include <classification_trainer.h>
+#include <fstream>
 
 int main() {
 
-    std::vector<int> layers{5};
+    std::vector<int> layers{10};
     std::vector<std::string> activations{"softmax"};
-    MLP mlp = MLP(3, 3, layers, activations);
-
-    std::vector<std::vector<float>> batch{{1, 2, 3},
-                                          {2, 1, 3},
-                                          {3, 2, 1}};
-
-    std::vector<std::vector<float>> host_labels{{1, 0, 0, 0, 0},
-                                                {0, 1, 0, 0, 0},
-                                                {0, 0, 1, 0, 0}};
+    MLP mlp = MLP(784, 32, layers, activations);
 
     mlp.forward_initialize();
-    mlp.forward(batch);
 
-    std::vector<example> dataset;
+    std::vector<example> train_dataset;
 
-    for(int i = 0;i<3;i++){
-        example e;
-        e.x = batch[i];
-        e.y = host_labels[i];
+    std::vector<std::vector<float>> val_x;
+    std::vector<std::vector<float>> val_y;
 
-        dataset.push_back(e);
-    }
+    std::ifstream train_image_input("../train_MNIST_images.txt");
+    std::ifstream val_image_input("../val_MNIST_images.txt", std::ios::in);
 
-    std::unordered_map<std::string, float> params;
-    params["learning_rate"] = 3;
+    std::ifstream train_label_input("../train_MNIST_labels.txt", std::ios::in);
+    std::ifstream val_label_input("../val_MNIST_labels.txt", std::ios::in);
 
-    ClassificationTrainer trainer = ClassificationTrainer(&mlp, dataset, params);
+    if(!train_image_input.is_open() || !val_image_input.is_open() || !train_label_input.is_open() ||
+    !val_label_input.is_open())throw std::runtime_error("can't read training data");
 
-    trainer.train(100, 1);
+    for(int i = 0;i<20000;i++){
+        std::vector<float> train_x(784);
+        std::vector<float> v_x(784);
 
-    mlp.forward(batch);
+        std::vector<float> train_y(10);
+        std::vector<float> v_y(10);
+        for(int j = 0;j<784;j++){
+            train_image_input>>train_x[j];
+            if(i<10000)val_image_input>>v_x[j];
+        }
 
-    /*VkBuffer labels;
-    VkDeviceMemory deviceMemory;
-    createBuffer(mlp.get_device(), mlp.get_queue_index(), labels, 3, 5);
-    std::vector<VkBuffer*> buffers{&labels};
-    std::vector<uint64_t> offsets;
-    allocateAndBindBuffers(mlp.get_device(), mlp.get_physicalDevice(), buffers, deviceMemory, offsets);
+        for(int j = 0;j<10;j++){
+            train_label_input>>train_y[j];
+            if(i<10000)val_label_input>>v_y[j];
+        }
 
-    char* data = nullptr;
-    if(vkMapMemory(mlp.get_device(), deviceMemory, 0, VK_WHOLE_SIZE, 0, reinterpret_cast<void **>(&data)) != VK_SUCCESS){
-        throw std::runtime_error("failed to map device memory");
-    }
-    float* device_labels = reinterpret_cast<float*>(data + offsets[0]);
-    for(int i = 0;i<host_labels.size();i++){
-        for(int j=0;j<host_labels[0].size();j++){
-            device_labels[i*5+j] = host_labels[i][j];
+        example train_e{.x=train_x, .y=train_y};
+
+        train_dataset.push_back(train_e);
+        if(i<10000){
+            val_x.push_back(v_x);
+            val_y.push_back(v_y);
         }
     }
-    vkUnmapMemory(mlp.get_device(), deviceMemory);
 
-    mlp.backward_initialize(labels);
+    std::cout<<"accuracy before training: "<<mlp.evaluate(val_x, val_y)<<std::endl;
 
-    for(int i = 0;i<1000;i++){
-        mlp.forward(batch);
-        mlp.backward();
-    }
+    std::unordered_map<std::string, float> params;
+    params["learning_rate"] = 0.3;
 
+    ClassificationTrainer trainer = ClassificationTrainer(&mlp, train_dataset, params);
 
-    vkFreeMemory(mlp.get_device(), deviceMemory, nullptr);
-    vkDestroyBuffer(mlp.get_device(), labels, nullptr);*/
+    std::vector<float> loss_history;
+
+    trainer.train(1000, loss_history, 1);
+
+    std::cout<<"accuracy after training: "<<mlp.evaluate(val_x, val_y)<<std::endl;
 
     return 0;
 }

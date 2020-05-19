@@ -31,7 +31,8 @@ public:
     ClassificationTrainer(MLP* mlp, std::vector<example> &dataset, const std::unordered_map<std::string, float>& optimizer_params,
                           const std::string& optimizer="sgd");
 
-    void train(uint32_t num_iterations, uint32_t print_every=0) override;
+    void train(uint32_t num_iterations, uint32_t print_every) override;
+    void train(uint32_t num_iterations, std::vector<float>& loss_history, uint32_t print_every) override;
 
     float compute_loss(const std::vector<std::vector<float>>& labels) override;
 

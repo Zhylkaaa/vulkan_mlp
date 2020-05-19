@@ -30,6 +30,11 @@ class MLP {
 
     uint32_t batch_size;
     uint32_t input_size;
+
+    void eval_batch(std::vector<std::vector<float>>& batch, VkCommandBuffer& evalCommandBuffer,
+                    VkDeviceMemory evalDeviceMemory, std::vector<uint64_t>& eval_offsets, uint32_t& correct_predictions,
+                    std::vector<std::vector<float>>& true_labels);
+
 public:
     MLP();
 
@@ -55,6 +60,8 @@ public:
     uint32_t get_layer_count(){return layers.size();}
 
     std::vector<std::pair<Tensor, Tensor>> get_trainable_parameters();
+
+    float evaluate(std::vector<std::vector<float>>& X, std::vector<std::vector<float>>& y);
 
     ~MLP();
 

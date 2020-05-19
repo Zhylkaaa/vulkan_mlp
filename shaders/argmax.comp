@@ -1,0 +1,31 @@
+#version 450
+
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding=0) buffer inP { float predictions[]; };
+layout(std430, binding=1) buffer inAm { uint argmax[]; };
+
+layout(push_constant) uniform dim {
+    uint batch_size;
+    uint inp_dim;
+};
+
+void main(){
+    uint x = gl_GlobalInvocationID.x;
+
+    if(x >= batch_size)return;
+
+    uint idx = x*inp_dim;
+
+    uint res = 0;
+    float m = predictions[idx];
+
+    for(uint i = 1;i<inp_dim;i++){
+        if(m < predictions[idx + i]){
+            res = i;
+            m = predictions[idx + i];
+        }
+    }
+
+    argmax[x] = res;
+}
