@@ -7,8 +7,8 @@
 
 int main() {
 
-    std::vector<int> layers{10};
-    std::vector<std::string> activations{"softmax"};
+    std::vector<int> layers{512, 10};
+    std::vector<std::string> activations{"relu", "softmax"};
     MLP mlp = MLP(784, 32, layers, activations);
 
     mlp.forward_initialize();
