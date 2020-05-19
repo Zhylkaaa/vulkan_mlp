@@ -25,27 +25,31 @@ void DenseLayer::forward_initialize(VkQueue &queue) {
     recordComputePipeline(forwardCommandBuffer, forwardPipelineLayout, sizeof(dims), reinterpret_cast<void*>(&dim),
             forwardPipeline,forwardDescriptorSet, (dim.batch_size+15)/16, (dim.output_dim+15)/16, 1);
 
-    // TODO: actual xavier initialization
+    // TODO: actual He-et-al initialization
     char* data = nullptr;
     if(vkMapMemory(device, forwardDeviceMemory, 0, VK_WHOLE_SIZE, 0, reinterpret_cast<void **>(&data)) != VK_SUCCESS){
         throw std::runtime_error("failed to map device memory");
     }
 
-    float* weight = reinterpret_cast<float*>(data + forward_offsets[0]);
-    float* bias = reinterpret_cast<float*>(data + forward_offsets[1]);
+    if(initializer == "He-et-al"){
+        float* weight = reinterpret_cast<float*>(data + forward_offsets[0]);
+        float* bias = reinterpret_cast<float*>(data + forward_offsets[1]);
 
-    for(int i = 0;i<dim.output_dim;i++){
-        bias[i] = 0;
-    }
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::normal_distribution<float> dis(0.0, 1.0);
-
-    for(int i = 0;i<dim.inp_dim;i++){
-        for(int j = 0;j<dim.output_dim;j++){
-            weight[i*dim.output_dim + j] = scale * dis(gen);
+        for(int i = 0;i<dim.output_dim;i++){
+            bias[i] = 0;
         }
+
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::normal_distribution<float> dis(0.0, 2.0/dim.inp_dim);
+
+        for(int i = 0;i<dim.inp_dim;i++){
+            for(int j = 0;j<dim.output_dim;j++){
+                weight[i*dim.output_dim + j] = dis(gen);
+            }
+        }
+    } else {
+        throw std::invalid_argument("unknown initializer");
     }
     vkUnmapMemory(device, forwardDeviceMemory);
 

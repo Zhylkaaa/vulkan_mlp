@@ -22,8 +22,6 @@ $ ./vulkan_perceptron
 ```
 
 ## TODOs
-- Implement xavier initialization
-- Example with part of `MNIST` dataset
 - Switch to using Tensor instead of VkBuffer
 - Implement trainers for different tasks
 - BIG code refactor
