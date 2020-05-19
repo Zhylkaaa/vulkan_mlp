@@ -37,7 +37,7 @@ void SoftmaxLayer::forward_initialize(VkQueue &queue) {
     createCommandPoolAndBuffer(device, queueFamilyIndex, forwardCommandPool, forwardCommandBuffer);
 
     recordComputePipeline(forwardCommandBuffer, forwardPipelineLayout, sizeof(dims), reinterpret_cast<void*>(&dim),
-                          forwardPipeline,forwardDescriptorSet, (dim.batch_size+31)/32, 1, 1);
+                          forwardPipeline,forwardDescriptorSet, (dim.batch_size+63)/64, 1, 1);
 
 }
 

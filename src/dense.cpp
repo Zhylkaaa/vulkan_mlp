@@ -124,7 +124,7 @@ void DenseLayer::backward_initialize(VkBuffer &d_out) {
                           backwardWeightPipeline,backwardDescriptorSet, (dim.inp_dim+15)/16, (dim.output_dim+15)/16, 1);
 
     recordComputePipeline(backwardBiasCommandBuffer, backwardPipelineLayout, sizeof(dims), reinterpret_cast<void*>(&dim),
-                          backwardBiasPipeline,backwardDescriptorSet, (dim.output_dim+31)/32, 1, 1);
+                          backwardBiasPipeline,backwardDescriptorSet, (dim.output_dim+63)/64, 1, 1);
     backward_initialized = true;
 }
 
