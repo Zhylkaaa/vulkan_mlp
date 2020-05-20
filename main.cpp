@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
 
     std::vector<float> loss_history;
 
-    trainer.train(optimization_steps, loss_history, 1);
+    trainer.train(optimization_steps, loss_history, 100);
 
     std::cout<<"accuracy after training: "<<mlp.evaluate(val_x, val_y)<<std::endl;
 

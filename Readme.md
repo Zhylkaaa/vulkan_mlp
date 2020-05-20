@@ -14,7 +14,25 @@ $ mkdir build
 $ cd build
 $ cmake ..
 $ make
-$ ./vulkan_perceptron
+```
+
+To check if it works you can run example:
+
+```bash
+$ ./vulkan_perceptron \
+--train_dataset_size 20000 \
+--val_dataset_size 10000 \
+--train_data_path ../train_MNIST_images.txt \
+--train_labels_path ../train_MNIST_labels.txt \
+--val_data_path ../val_MNIST_images.txt \
+--val_labels_path ../val_MNIST_labels.txt \
+--batch_size 32 \
+--x_dim 784 \
+--y_dim 10 \
+--learning_rate 0.3 \
+--optimization_steps 1000 \
+--layers=512,10 \
+--activations=relu,softmax
 ```
 
 ## Quick reference
@@ -27,8 +45,6 @@ Activation list:
 - relu - Rectified linear unit 
 - id - identity (not a layer actually, it's just omitted)
 - softmax - softmax function, not actually an activation function, but it's hear for sake of simplicity
-
-You can refer to `line 10,11,12 of main.cpp` for usage example.
 
 ## TODOs
 - Switch to using Tensor instead of VkBuffer
