@@ -4,15 +4,17 @@
 
 #include <MLP.h>
 
-MLP::MLP(uint32_t input_size, uint32_t batch_size, const std::vector<int> &layer_dims, const std::vector<std::string> &activations) {
+MLP::MLP(uint32_t input_size, uint32_t batch_size, const std::vector<uint32_t> &layer_dims, const std::vector<std::string> &activations) {
     setup_vulkan(instance, debugMessenger, physicalDevice, queueFamilyIndex, device, queue);
+
+    if(layer_dims.size() != activations.size())throw std::invalid_argument("layers should have same size as activations");
 
     for(int i = 0;i<layer_dims.size();i++){
         add(layer_dims[i], activations[i], input_size, batch_size);
     }
 }
 
-void MLP::add(int layer_dim, const std::string &activation, uint32_t input_size, uint32_t batch_size) {
+void MLP::add(uint32_t layer_dim, const std::string &activation, uint32_t input_size, uint32_t batch_size) {
     if(layers.empty() && (input_size == 0 || batch_size == 0)){
         throw std::invalid_argument("first layer should specify input and batch size greater than 0");
     }

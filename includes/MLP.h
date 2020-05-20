@@ -38,9 +38,9 @@ class MLP {
 public:
     MLP();
 
-    MLP(uint32_t input_size, uint32_t batch_size, const std::vector<int>& layer_dims, const std::vector<std::string>& activations);
+    MLP(uint32_t input_size, uint32_t batch_size, const std::vector<uint32_t>& layer_dims, const std::vector<std::string>& activations);
 
-    void add(int layer_dim, const std::string& activation, uint32_t input_size=0, uint32_t batch_size=0);
+    void add(uint32_t layer_dim, const std::string& activation, uint32_t input_size=0, uint32_t batch_size=0);
 
     void forward_initialize();
     void forward(const std::vector<std::vector<float>>& batch);

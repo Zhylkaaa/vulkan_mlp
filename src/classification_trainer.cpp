@@ -11,6 +11,7 @@ ClassificationTrainer::ClassificationTrainer(MLP* mlp,
     this->mlp = mlp;
 
     if(get_layers().empty())throw std::invalid_argument("model should contain some layers");
+    if(dynamic_cast<SoftmaxLayer*>((get_layers().back())) == nullptr)throw std::invalid_argument("last activation should be softmax");
 
     this->dataset = dataset;
 
